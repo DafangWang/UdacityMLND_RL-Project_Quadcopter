@@ -17,11 +17,12 @@ class Task():
         # Simulation
         self.sim = PhysicsSim(init_pose, init_velocities, init_angle_velocities, runtime) 
         self.action_repeat = 3
-
-        self.state_size = self.action_repeat * 6
+        
+        # State should be all positions & velocities for 3 dimensions & 3 angles
+        self.state_size = self.action_repeat * 12 
         self.action_low = 0
         self.action_high = 900
-        self.action_size = 4
+        self.action_size = 4 # one for each rotor
 
         # Goal
         self.target_pos = target_pos if target_pos is not None else np.array([0., 0., 10.]) 
