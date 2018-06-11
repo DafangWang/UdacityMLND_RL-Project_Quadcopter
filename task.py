@@ -35,16 +35,24 @@ class Task():
     def step(self, rotor_speeds):
         """Uses action to obtain next state, reward, done."""
         reward = 0
-        pose_all = []
+        pose_vel_all = []
+        vel_all = []
         for _ in range(self.action_repeat):
             done = self.sim.next_timestep(rotor_speeds) # update the sim pose and velocities
             reward += self.get_reward() 
-            pose_all.append(self.sim.pose)
-        next_state = np.concatenate(pose_all)
+            #  Get all positions (direstions, angles) for current instant
+            instant_pose = self.sim.pose
+            # Get all velocities (positions, angular) for current instant
+            instant_vel = np.concatenate((self.sim.v, self.sim.angular_v))
+            # For action repeat, get all 12pts for state
+            pose_vel_all.append(np.concatenate((instant_pose,instant_vel)))
+        # Get full state
+        next_state = np.concatenate(pose_vel_all)
         return next_state, reward, done
 
     def reset(self):
         """Reset the sim to start a new episode."""
         self.sim.reset()
-        state = np.concatenate([self.sim.pose] * self.action_repeat) 
+        all_pose_vel = np.concatenate((self.sim.pose, self.sim.v, self.sim.angular_v)) 
+        state = np.concatenate([all_pose_vel] * self.action_repeat) 
         return state
