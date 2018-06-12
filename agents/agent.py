@@ -22,25 +22,40 @@ class PolicySearch_Agent():
 
         # Episode variables
         self.reset_episode()
-
-    def reset_episode(self):
-        self.total_reward = 0.0
-        self.count = 0
-        state = self.task.reset()
-        return state
-
-    def step(self, reward, done):
-        # Save experience / reward
-        self.total_reward += reward
-        self.count += 1
-
-        # Learn, if at end of episode
-        if done:
-            self.learn()
+        
+        # State space definitions
+        self.low_pos = 3*[0]      # assume there is nothing in negative directions
+        self.high_pos = 3*[100]
+        self.low_ang = 3*[0]      # assume angle is only positive
+        self.high_ang = 3*[10]
+        self.low_v = 3*[-10]
+        self.high_v = 3*[20]
+        self.low_ang_v = 3*[-1]
+        self.high_ang_v = 3*[1]
+        
+        # State combined (xyz, angles, v_xyz, v_angles)
+        self.state_low = np.concatenate((self.low_pos,self.low_ang,self.low_v,self.low_ang_v))
+        self.state_high = np.concatenate((self.high_pos,self.high_ang,self.high_v,self.high_ang_v))
+        self.bins = [25]*12 # Same # of bins for all points (likely will have to change
+        
+        # Defining the discrete grid
+        self.grid = self.create_grid(self.state_low, self.state_high, self.bins)
+        
+        # Learning parameters
+        self.alpha = 0.02  # learning rate
+        self.gamma = 0.99 # discount factor
+        self.epsilon = self.initial_epsilon = 1.  # initial exploration rate
+        self.epsilon_decay_rate = 0.9995 # how quickly should we decrease epsilon
+        self.min_epsilon = 0.01
+        
+        # Create Q-table
+        self.q_table = np.zeros(shape=(self.state_size + (self.action_size,)))
+       
+ 
 
     ##### Create grid & point from the continuous space
     
-    def create_grid(low, high, bins):
+    def create_grid(self, low, high, bins):
         ''' Define a grid with uniform spaces. Inspired by 
             github.com/udacity/reinforcement-learning
             
@@ -65,7 +80,7 @@ class PolicySearch_Agent():
         return grid
         
     
-    def discretize(point, grid):
+    def discretize(self, point, grid):
         '''Discretize a state for the given grid. Inspired by 
            github.com/udacity/reinforcement-learning
 
@@ -82,8 +97,28 @@ class PolicySearch_Agent():
             A sequence of integers with the same number of dimensions as point.
         '''
         # Digitize for each dimension of original continuous space
-        discretized_point = [int(np.digitize(p, g)) for s, g in zip(point, grid)]
+        discretized_point = [int(np.digitize(p, g)) for p, g in zip(point, grid)]
         return discretized_point
+      
+    def preprocess_state(self, state):
+        '''Map continuous state to discretization.'''
+        return tuple(discretize(state, self.state_grid))
+        
+    def reset_episode(self):
+        self.total_reward = 0.0
+        self.count = 0
+        state = self.task.reset()
+        return state
+
+    def step(self, reward, done):
+        # Save experience / reward
+        self.total_reward += reward
+        self.count += 1
+
+        # Learn, if at end of episode
+        if done:
+            self.learn()
+
     
     def act(self, state):
         # Choose action based on given state and policy
