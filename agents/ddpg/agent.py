@@ -1,7 +1,8 @@
-from agents.actor import Actor
-from agents.critic import Critic
-from agents.noise import OUNoise
-from agents.replay_buffer import ReplayBuffer
+import numpy as np
+from agents.ddpg.actor import Actor
+from agents.ddpg.critic import Critic
+from agents.ddpg.noise import OUNoise
+from agents.ddpg.replay_buffer import ReplayBuffer
 
 
 class DDPG():
