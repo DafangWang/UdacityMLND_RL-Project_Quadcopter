@@ -40,6 +40,10 @@ class DDPG():
         # Algorithm parameters
         self.gamma = 0.99  # discount factor
         self.tau = 0.01  # for soft update of target parameters
+        
+        # Logging info
+        self.best_score = -np.inf
+
 
     def reset_episode(self):
         self.noise.reset()
