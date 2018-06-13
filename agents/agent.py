@@ -3,26 +3,6 @@ from task import Task
 
 class PolicySearch_Agent():
     def __init__(self, task):
-        # Task (environment) information
-        self.task = task
-        self.state_size = task.state_size
-        self.action_size = task.action_size
-        self.action_low = task.action_low
-        self.action_high = task.action_high
-        self.action_range = self.action_high - self.action_low
-
-        self.w = np.random.normal(
-            size=(self.state_size, self.action_size),  # weights for simple linear policy: state_space x action_space
-            scale=(self.action_range / (2 * self.state_size))) # start producing actions in a decent range
-
-        # Score tracker and learning parameters
-        self.best_w = None
-        self.best_score = -np.inf
-        self.noise_scale = 0.1
-
-        # Episode variables
-        self.reset_episode()
-        
         # State space definitions
         self.low_pos = 3*[0]      # assume there is nothing in negative directions
         self.high_pos = 3*[100]
@@ -39,7 +19,28 @@ class PolicySearch_Agent():
         self.bins = [25]*12 # Same # of bins for all points (likely will have to change
         
         # Defining the discrete grid
-        self.grid = self.create_grid(self.state_low, self.state_high, self.bins)
+        self.state_grid = self.create_grid(self.state_low, self.state_high, self.bins)
+        
+        
+        # Task (environment) information
+        self.task = task
+#         self.state_size = task.state_size
+        self.state_size = tuple(len(splits) + 1 for splits in self.state_grid)
+        self.action_size = task.action_size
+        self.action_low = task.action_low
+        self.action_high = task.action_high
+        self.action_range = self.action_high - self.action_low
+
+
+
+        # Score tracker and learning parameters
+#         self.best_w = None
+#         self.best_score = -np.inf
+        self.noise_scale = 0.1
+
+        # Episode variables
+        self.reset_env()
+        
         
         # Learning parameters
         self.alpha = 0.02  # learning rate
@@ -49,7 +50,12 @@ class PolicySearch_Agent():
         self.min_epsilon = 0.01
         
         # Create Q-table
-        self.q_table = np.zeros(shape=(self.state_size + (self.action_size,)))
+        print(self.state_size)
+        print((self.action_size,))
+        a = (self.state_size + (self.action_size,))
+        print(a)
+#         print(np.zeros(shape=a))
+        self.q_table = np.zeros(shape=a)
        
  
 
@@ -104,36 +110,68 @@ class PolicySearch_Agent():
         '''Map continuous state to discretization.'''
         return tuple(discretize(state, self.state_grid))
         
-    def reset_episode(self):
-        self.total_reward = 0.0
-        self.count = 0
+    def reset_env(self):
         state = self.task.reset()
         return state
+        
+    def reset_episode(self, state):
+        self.total_reward = 0.0
+        self.count = 0
+        
+        # Gradually decrease exploration rate
+        self.epsilon *= self.epsilon_decay_rate
+        self.epsilon = max(self.epsilon, self.min_epsilon)
 
-    def step(self, reward, done):
-        # Save experience / reward
-        self.total_reward += reward
-        self.count += 1
+        # Decide initial action
+        self.state = self.preprocess_state(state)
+        self.action = np.argmax(self.q_table[self.state])
+        return self.action
 
-        # Learn, if at end of episode
-        if done:
-            self.learn()
+
+#     def step(self, reward, done):
+#         # Save experience / reward
+#         self.total_reward += reward
+#         self.count += 1
+
+#         # Learn, if at end of episode
+#         if done:
+#             self.learn()
 
     
-    def act(self, state):
-        # Choose action based on given state and policy
-        action = np.dot(state, self.w)  # simple linear policy
+    def act(self, state, reward):
+        """Pick next action and update internal Q table."""
+        # Save reward
+        self.total_reward += reward
+        
+        state = self.preprocess_state(state)
+
+        # We update the Q table entry for the *last* (state, action) pair with current state, reward
+        self.q_table[self.last_state + (self.last_action,)] += self.alpha * \
+            (reward + self.gamma * max(self.q_table[state]) - self.q_table[self.last_state + (self.last_action,)])
+
+        # Exploration vs. exploitation
+        do_exploration = np.random.uniform(0, 1) < self.epsilon
+        if do_exploration:
+            # Pick a random action
+            action = np.random.randint(0, self.action_size)
+        else:
+            # Pick the best action from Q table
+            action = np.argmax(self.q_table[state])
+
+        # Roll over current state, action for next step
+        self.last_state = state
+        self.last_action = action
         return action
 
-    def learn(self):
-        # Learn by random policy search, using a reward-based score
-        self.score = self.total_reward / float(self.count) if self.count else 0.0
-        if self.score > self.best_score:
-            self.best_score = self.score
-            self.best_w = self.w
-            self.noise_scale = max(0.5 * self.noise_scale, 0.01)
-        else:
-            self.w = self.best_w
-            self.noise_scale = min(2.0 * self.noise_scale, 3.2)
-        self.w = self.w + self.noise_scale * np.random.normal(size=self.w.shape)  # equal noise in all directions
+#     def learn(self):
+#         # Learn by random policy search, using a reward-based score
+#         self.score = self.total_reward / float(self.count) if self.count else 0.0
+#         if self.score > self.best_score:
+#             self.best_score = self.score
+#             self.best_w = self.w
+#             self.noise_scale = max(0.5 * self.noise_scale, 0.01)
+#         else:
+#             self.w = self.best_w
+#             self.noise_scale = min(2.0 * self.noise_scale, 3.2)
+#         self.w = self.w + self.noise_scale * np.random.normal(size=self.w.shape)  # equal noise in all directions
         
