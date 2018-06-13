@@ -29,15 +29,18 @@ class Task():
 
     def get_reward(self):
         """Uses current pose of sim to return reward."""
+#         reward = np.tanh(1 - 0.003*(abs(self.sim.pose[:3] - self.target_pos))).sum()
         # Discourage fast position velocities
         vel_pos_reward = -np.log(abs(self.sim.v[:3].sum()) + 1)
-        # Strongly discourage angle tilting too quickly
-        vel_ang_reward = -2 * np.log(abs(self.sim.v[3:].sum()) + 1)
+#         # Strongly discourage angle tilting too quickly
+#         vel_ang_reward = -2 * np.log(abs(self.sim.v[3:].sum()) + 1)
         # Discourage being at wrong position
-        pos_reward = -.3 * (abs(self.sim.pose[:3] - self.target_pos)).sum()
-        # Discourage large angular tilt positions
-        ang_reward = -.3 * abs(self.sim.pose[3:].sum())
-        reward = 1. + vel_pos_reward + vel_ang_reward + ang_reward + pos_reward 
+        pos_reward = -np.tanh(0.003*(abs(self.sim.pose[:3] - self.target_pos).sum()))
+#         pos_reward = -.3 * (abs(self.sim.pose[:3] - self.target_pos)).sum()
+#         # Discourage large angular tilt positions
+#         ang_reward = -.3 * abs(self.sim.pose[3:].sum())
+#         reward = 1. + vel_pos_reward + vel_ang_reward + ang_reward + pos_reward 
+        reward = 1 + pos_reward + vel_pos_reward
         return reward
 
     def step(self, rotor_speeds):
