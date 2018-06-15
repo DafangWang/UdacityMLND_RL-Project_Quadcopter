@@ -26,22 +26,15 @@ class Critic:
         actions = layers.Input(shape=(self.action_size,), name='actions')
 
         
-        
-        
-        
-        
-        
-        
-        
         # Add hidden layer(s) for state pathway
-        net_states = layers.Dense(units=128, activation='relu')(states)
+        net_states = layers.Dense(units=256, activation='relu')(states)
         net_states = layers.BatchNormalization()(net_states)
-        net_states = layers.Dense(units=256, activation='relu')(net_states)
+        net_states = layers.Dense(units=512, activation='relu')(net_states)
 
         # Add hidden layer(s) for action pathway
         net_actions = layers.Dense(units=256, activation='relu')(actions)
         net_actions = layers.BatchNormalization()(net_actions)
-#         net_actions = layers.Dense(units=256, activation='relu')(net_actions)
+        net_actions = layers.Dense(units=512, activation='relu')(net_actions)
 
         # Try different layer sizes, activations, add batch normalization, regularizers, etc.
 
@@ -50,9 +43,15 @@ class Critic:
         net = layers.Activation('relu')(net)
 
         # Add more layers to the combined network if needed
+        net = layers.Dense(units=512, activation='relu')(net)
+        net = layers.Dense(units=256, activation='relu')(net)
+        net = layers.Dense(units=128, activation='relu')(net)
+        
 
         # Add final output layer to prduce action values (Q values)
-        Q_values = layers.Dense(units=1, name='q_values')(net)
+        Q_values = layers.Dense(units=1, 
+            kernel_initializer=layers.initializers.RandomUniform(minval=-0.003,maxval=0.003),
+            name='q_values')(net)
 
         # Create Keras model
         self.model = models.Model(inputs=[states, actions], outputs=Q_values)

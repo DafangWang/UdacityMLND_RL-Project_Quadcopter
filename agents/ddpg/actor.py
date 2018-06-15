@@ -30,16 +30,17 @@ class Actor:
         states = layers.Input(shape=(self.state_size,), name='states')
 
         # Add hidden layers
-        net = layers.Dense(units=128, activation='relu')(states)
+        net = layers.Dense(units=256, activation='relu')(states)
+        net = layers.BatchNormalization()(net)
+        net = layers.Dense(units=512, activation='relu')(net)
         net = layers.BatchNormalization()(net)
         net = layers.Dense(units=256, activation='relu')(net)
         net = layers.BatchNormalization()(net)
-        net = layers.Dense(units=128, activation='relu')(net)
-
         # Try different layer sizes, activations, add batch normalization, regularizers, etc.
 
         # Add final output layer with sigmoid activation
         raw_actions = layers.Dense(units=self.action_size, activation='sigmoid',
+            kernel_initializer=layers.initializers.RandomUniform(minval=-0.003, maxval=0.003),
             name='raw_actions')(net)
 
         # Scale [0, 1] output for each action dimension to proper range
