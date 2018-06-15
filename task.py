@@ -29,18 +29,42 @@ class Task():
 
     def get_reward(self):
         """Uses current pose of sim to return reward."""
-        reward = np.tanh(1 - 0.003*(abs(self.sim.pose[:3] - self.target_pos))).sum()
-        # Discourage fast position velocities
-#         vel_pos_reward = -np.log(abs(self.sim.v[:3].sum()) + 1)
-#         # Strongly discourage angle tilting too quickly
-#         vel_ang_reward = -2 * np.log(abs(self.sim.v[3:].sum()) + 1)
-        # Discourage being at wrong position
-#         pos_reward = -np.tanh(0.003*(abs(self.sim.pose[:3] - self.target_pos).sum()))
-#         pos_reward = -.3 * (abs(self.sim.pose[:3] - self.target_pos)).sum()
-#         # Discourage large angular tilt positions
-#         ang_reward = -.3 * abs(self.sim.pose[3:].sum())
-#         reward = 1. + vel_pos_reward + vel_ang_reward + ang_reward + pos_reward 
-#         reward = 1 + pos_reward + vel_pos_reward
+        # Ignore X & Y velocities for now
+        reward_xy_vel = 0
+        
+        # Two states that matter: below target or above target
+        # Note being at target exactly is defined as being "below" target
+        isBelowTarget = self.sim.pose[2] <= self.target_pos[2]
+        if isBelowTarget:
+            # positively reward +Z velocity but strongly discourage any -Z velocity
+            if self.sim.v[2] <= 0: # v==0 gives zero score
+                # Discourage high negative velocities
+                reward_z_vel = 1*np.tanh(-(self.sim.v[2])**2)
+            else:
+                # Strong reward for small velocities, but diminishing returns on higher velocity
+                reward_z_vel = 5*np.tanh(0.5 + 10*self.sim.v[2] ) #encourage high velocities
+        # Above target (take it down)
+        else:
+            # positively reward -Z velocity but strongly discourage any +Z velocity
+            if self.sim.v[2] > 0:
+                # Somewhat discourage positive velocities 
+                reward_z_vel = -2*np.tanh((self.sim.v[2])**2)
+            else:
+                # Encourage negative velocities (reward small quickly; diminishing returns)
+                reward_z_vel = 1*np.tanh(0.5 + -self.sim.v[2])
+                
+        # One velocity reward
+        reward_xyz_vel = reward_xy_vel + reward_z_vel
+        
+        # Reward correct position (z)
+        reward_z_pos = 5*np.tanh(1 - 0.003*(abs(self.sim.pose[2] - self.target_pos[2])))
+        # Don't stress about position for x & y for now
+        reward_xy_pos = 0 
+        reward_xyz_pos = reward_xy_pos + reward_z_pos
+
+        # Scale final reward so total is usually less than 10 for each episode
+        reward = (reward_xyz_vel + reward_xyz_pos)/100.
+
         return reward
 
     def step(self, rotor_speeds):
