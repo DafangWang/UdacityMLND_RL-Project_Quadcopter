@@ -37,33 +37,38 @@ class Task():
         isBelowTarget = self.sim.pose[2] <= self.target_pos[2]
         if isBelowTarget:
             # positively reward +Z velocity but strongly discourage any -Z velocity
-            if self.sim.v[2] <= 0: # v==0 gives zero score
+            if self.sim.v[2] < 0: 
                 # Discourage high negative velocities
-                reward_z_vel = 1*np.tanh(-(self.sim.v[2])**2)
-            else:
-                # Strong reward for small velocities, but diminishing returns on higher velocity
-                reward_z_vel = 5*np.tanh(0.5 + 10*self.sim.v[2] ) #encourage high velocities
+                reward_z_vel = 2*np.tanh(-self.sim.v[2])
+            else: # v==0 gives positive reward
+                # Encourage immediate z-thrust (negative reward) for small velocity
+                # Encourage high velocity but diminishing returns on higher velocities
+                reward_z_vel = 5*np.tanh(-0.1 + 0.2*self.sim.v[2])
         # Above target (take it down)
         else:
             # positively reward -Z velocity but strongly discourage any +Z velocity
             if self.sim.v[2] > 0:
                 # Somewhat discourage positive velocities 
-                reward_z_vel = -2*np.tanh((self.sim.v[2])**2)
+                reward_z_vel = -3*np.tanh(self.sim.v[2])
+            elif self.sim.v[2] > -0.5:
+                # Encourage slow but negative values
+                reward_z_vel = -3*np.tanh(-1.5 + -self.sim.v[2])
             else:
-                # Encourage negative velocities (reward small quickly; diminishing returns)
-                reward_z_vel = 1*np.tanh(0.5 + -self.sim.v[2])
+                # Encourage negative velocities but diminishing returns
+                reward_z_vel = 0.5*np.tanh(0.5 + -self.sim.v[2])
                 
         # One velocity reward
         reward_xyz_vel = reward_xy_vel + reward_z_vel
         
         # Reward correct position (z)
-        reward_z_pos = 5*np.tanh(1 - 0.003*(abs(self.sim.pose[2] - self.target_pos[2])))
+        reward_z_pos = 20*np.tanh(1 - 0.1*abs(self.sim.pose[2] - self.target_pos[2]))
         # Don't stress about position for x & y for now
         reward_xy_pos = 0 
         reward_xyz_pos = reward_xy_pos + reward_z_pos
 
         # Scale final reward so total is usually less than 10 for each episode
-        reward = (reward_xyz_vel + reward_xyz_pos)/100.
+        # Give automatic points for each timestep it's running (avoid crash)
+        reward = (5 + reward_xyz_vel + reward_xyz_pos)/100.
 
         return reward
 
