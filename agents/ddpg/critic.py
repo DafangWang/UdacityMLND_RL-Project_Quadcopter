@@ -43,10 +43,6 @@ class Critic:
         net = layers.Activation('relu')(net)
 
         # Add more layers to the combined network if needed
-        net = layers.Dense(units=512, activation='relu')(net)
-        net = layers.Dense(units=256, activation='relu')(net)
-        net = layers.Dense(units=128, activation='relu')(net)
-        
 
         # Add final output layer to prduce action values (Q values)
         Q_values = layers.Dense(units=1, 
