@@ -58,7 +58,7 @@ class Task():
             else:
                 # Discou negative velocities but diminishing returns
 #                 reward_z_vel = 1*np.tanh(0.5 + -self.sim.v[2])
-                reward_z_vel = -np.log(-self.sim.v[2]) 
+                reward_z_vel = -np.log(abs(self.sim.v[2]))
                 
         # One velocity reward
         reward_xyz_vel = reward_xy_vel + reward_z_vel
