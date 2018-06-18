@@ -56,17 +56,16 @@ class Task():
 #                 reward_z_vel = 1*np.tanh(1.5 + self.sim.v[2])
                 reward_z_vel = 1*np.tanh(0.5 + -self.sim.v[2]) # v{0,-0.5} => r{0.5,0.7}
             else:
-                # Discou negative velocities but diminishing returns
-#                 reward_z_vel = 1*np.tanh(0.5 + -self.sim.v[2])
+                # Discount negative velocities but diminishing returns
                 reward_z_vel = -np.log(abs(self.sim.v[2]))
                 
         # One velocity reward
         reward_xyz_vel = reward_xy_vel + reward_z_vel
         
         # Reward correct position (z)
-        reward_z_pos = 2*np.tanh(1 - 0.01*abs(self.sim.pose[2] - self.target_pos[2]))
-        # Don't stress about position for x & y for now
-        reward_xy_pos = 0 
+        reward_z_pos = 6*np.tanh(1 - 0.1*abs(self.sim.pose[2] - self.target_pos[2]))
+        # Position for x & y for should count less than the z position
+        reward_xy_pos = 1*np.tanh(1 - 0.02*abs(self.sim.pose[:2] - self.target_pos[:2]).sum())
         reward_xyz_pos = reward_xy_pos + reward_z_pos
 
         # Scale final reward so total is usually less than 10 for each episode
