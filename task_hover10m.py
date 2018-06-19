@@ -49,7 +49,7 @@ class Task():
             # positively reward -Z velocity but strongly discourage any +Z velocity
             if self.sim.v[2] > 0:
                 # Somewhat discourage positive velocities 
-                reward_z_vel = -2*np.tanh(self.sim.v[2])
+                reward_z_vel = -(self.sim.v[2])**0.5
 #                 reward_z_vel = -0.1*np.exp(self.sim.v[2])
             elif self.sim.v[2] > -0.5:
                 # Encourage slow but negative values
