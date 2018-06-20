@@ -31,8 +31,8 @@ class Task():
         """Uses current pose of sim to return reward."""
         # Ignore X & Y velocities for now
         reward_xy_vel = 0
-        
-        # Two states that matter: below target or above target
+            
+        # Two main states that matter regarding z-velocity: below target or above target
         # Note being at target exactly is defined as being "below" target
         isBelowTarget = self.sim.pose[2] <= self.target_pos[2]
         if isBelowTarget:
@@ -44,19 +44,19 @@ class Task():
                 # Encourage immediate z-thrust (negative reward) for small velocity
                 # Encourage high velocity but diminishing returns on higher velocities
                 reward_z_vel = 3*np.tanh(-0.3 + 0.2*self.sim.v[2])
+#                 reward_z_vel = 0.5*self.sim.v[2]**0.2
         # Above target (take it down)
         else:
             # positively reward -Z velocity but strongly discourage any +Z velocity
-            if self.sim.v[2] > 0:
+            if self.sim.v[2] >= 0:
                 # Somewhat discourage positive velocities 
-                reward_z_vel = -(self.sim.v[2])**0.5
-#                 reward_z_vel = -0.1*np.exp(self.sim.v[2])
+                reward_z_vel = -(self.sim.v[2])**0.2
             elif self.sim.v[2] > -0.5:
                 # Encourage slow but negative values
 #                 reward_z_vel = 1*np.tanh(1.5 + self.sim.v[2])
                 reward_z_vel = 1*np.tanh(0.5 + -self.sim.v[2]) # v{0,-0.5} => r{0.5,0.7}
             else:
-                # Discount negative velocities but diminishing returns
+                # Encourage negative velocities but diminishing returns
                 reward_z_vel = -np.log(abs(self.sim.v[2]))
                 
         # One velocity reward
@@ -64,6 +64,9 @@ class Task():
         
         # Reward correct position (z)
         reward_z_pos = 6*np.tanh(1 - 0.1*abs(self.sim.pose[2] - self.target_pos[2]))
+        # Strongly punish being too far above the target (overshot)
+        if self.sim.pose[2] > 15:
+            reward_z_pos = -0.2*self.sim.pose[2]
         # Position for x & y for should count less than the z position
         reward_xy_pos = 1*np.tanh(1 - 0.02*abs(self.sim.pose[:2] - self.target_pos[:2]).sum())
         reward_xyz_pos = reward_xy_pos + reward_z_pos
