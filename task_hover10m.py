@@ -61,28 +61,25 @@ class Task():
         reward_xyz_vel = reward_xy_vel + reward_z_vel
         
         
-        # Time reward for running down the simulation clock
-        reward_time = 0#1*np.tanh(self.sim.time - 3.0)
-        
-        
-        
         # Reward correct position (z)
-        reward_z_pos = 6*np.tanh(1 - 0.1*abs(self.sim.pose[2] - self.target_pos[2])) 
-        # Decrease this as an issue while time exists
-        reward_z_pos /= self.sim.time 
+        reward_z_pos = 6*np.tanh(1 - 0.1*abs(self.sim.pose[2] - self.target_pos[2]))  
+        
         # Strongly punish being too far above the target (overshot)
         if self.sim.pose[2] > 25:
             reward_z_pos = -0.2*self.sim.pose[2]
+            
+        # Decrease this as an issue while time exists
+        reward_z_pos /= self.sim.time
+        
         # Position for x & y for should count less than the z position
         reward_xy_pos = 1*np.tanh(1 - 0.02*abs(self.sim.pose[:2] - self.target_pos[:2]).sum())
+        
         reward_xyz_pos = reward_xy_pos + reward_z_pos
 
         
-        
-        
         # Scale final reward so total is usually less than 10 for each episode
         # Give automatic points for each timestep it's running (avoid crash)
-        reward = (reward_xyz_vel + reward_xyz_pos + reward_time)/100.
+        reward = (reward_xyz_vel + reward_xyz_pos)/1000.
 
         return reward
 
