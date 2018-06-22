@@ -29,52 +29,33 @@ class Task():
 
     def get_reward(self):
         """Uses current pose of sim to return reward."""
-        # Ignore X & Y velocities for now
-        reward_xy_vel = 0
-            
-        # Two main states that matter regarding z-velocity: below target or above target
-        # Note being at target exactly is defined as being "below" target
-        isBelowTarget = self.sim.pose[2] <= self.target_pos[2]
-        if isBelowTarget:
-            # positively reward +Z velocity but strongly discourage any -Z velocity
-            if self.sim.v[2] < 0: 
-                # Discourage high negative velocities
-                reward_z_vel = 1*np.tanh(self.sim.v[2])
-            else: # v==0 gives positive reward
-                # Encourage immediate z-thrust (negative reward) for small velocity
-                # Encourage high velocity but diminishing returns on higher velocities
-                reward_z_vel = 3*np.tanh(-0.3 + 0.2*self.sim.v[2])
-#                 reward_z_vel = 0.5*self.sim.v[2]**0.2
-        # Above target (take it down)
-        else:
-            # positively reward -Z velocity but strongly discourage any +Z velocity
-            if self.sim.v[2] >= 0:
-                # Somewhat discourage positive velocities 
-                reward_z_vel = -(self.sim.v[2])**0.2
-            elif self.sim.v[2] > -0.5:
-                # Encourage slow but negative values
-#                 reward_z_vel = 1*np.tanh(1.5 + self.sim.v[2])
-                reward_z_vel = 1*np.tanh(0.5 + -self.sim.v[2]) # v{0,-0.5} => r{0.5,0.7}
-            else:
-                # Encourage negative velocities but diminishing returns
-                reward_z_vel = -np.log(abs(self.sim.v[2]))
-                
-        # One velocity reward
-        reward_xyz_vel = reward_xy_vel + reward_z_vel
+        #
+        x,y,z = [0,1,2]
+        curr_time = self.sim.time
+        pos_z = self.sim.pose[z]
+        vel_z = self.sim.v[z]
         
-        # Reward correct position (z)
-        reward_z_pos = 6*np.tanh(1 - 0.1*abs(self.sim.pose[2] - self.target_pos[2]))
-        # Strongly punish being too far above the target (overshot)
-        if self.sim.pose[2] > 15:
-            reward_z_pos = -0.2*self.sim.pose[2]
-        # Position for x & y for should count less than the z position
-        reward_xy_pos = 1*np.tanh(1 - 0.02*abs(self.sim.pose[:2] - self.target_pos[:2]).sum())
-        reward_xyz_pos = reward_xy_pos + reward_z_pos
-
-        # Scale final reward so total is usually less than 10 for each episode
-        # Give automatic points for each timestep it's running (avoid crash)
-        reward = (reward_xyz_vel + reward_xyz_pos)/100.
-
+        # Positive/negative distance from target
+        rel_dist = [ (pos - target) for pos,target in zip(self.sim.pose[:3],self.target_pos[:3])]
+        # Positive distance from target
+        dist = [ abs(d) for d in rel_dist ]
+        
+        ## Position rewards
+        reward_pos_xy = 0.01 * np.tanh( 1. - sum(dist[:2]) )
+        reward_pos_z = 0.05 * np.tanh( 1. - dist[z] )
+        reward = reward_pos_xy + reward_pos_z
+        
+        # Time reward for running down the simulation clock
+        reward += (curr_time - 3.0) / 5.0
+        
+        # Velocity reward for going towards target (@good speed)
+        spread = 0.001
+        time_ideal = 0.5 #how long to get to target
+        v_ideal = (self.target_pos[z] - pos_z) / time_ideal
+        reward_ideal = 0.01
+        #
+        reward += -1 * spread * (vel_z - v_ideal)**2.0 + reward_ideal
+            
         return reward
 
     def step(self, rotor_speeds):
