@@ -22,7 +22,7 @@ class Task():
         self.state_size = self.action_repeat * 6
         self.action_low = 0
         self.action_high = 900
-        self.action_size = 4 # one for each rotor
+        self.action_size = 1 # one for each rotor
 
         # Goal
         self.target_pos = target_pos if target_pos is not None else np.array([0., 0., 10.]) 
