@@ -31,13 +31,16 @@ class Task():
         """Uses current pose of sim to return reward."""
 
         # Punish being far from target in z
-        reward_pos = np.tanh( 1. - (self.sim.pose[2] - self.target_pos[2]) ** 2. )
+        # -1 @ zero; 0 @ z=target; negative after
+        reward_pos = -np.log( (self.sim.pose[2] + 0.1)/(self.target_pos[2]) )**2.
     
+        # Penalize velocity in wrong direction
+        reward_wrong_vel = self.sim.v[2] * (self.target_pos[2] - self.sim.pose[2])
         
         # Constant to keep going; don't crash
         reward_const = 1.0
     
-        reward = 0.05*reward_pos + 0.1*reward_const
+        reward = (5*reward_pos + 5*reward_wrong_vel + 1*reward_const)/10.**5.
 
         return reward
 
