@@ -29,71 +29,15 @@ class Task():
 
     def get_reward(self):
         """Uses current pose of sim to return reward."""
-        
-        ############# Velocity Rewards #############
-        # Ignore X & Y velocities for now
-        reward_xy_vel = 0
-            
-        # Two main states that matter regarding z-velocity: below target or above target
-        # Note being at target exactly is defined as being "below" target
-        isBelowTarget = self.sim.pose[2] <= self.target_pos[2]
-        if isBelowTarget:
-            # positively reward +Z velocity but strongly discourage any -Z velocity
-            if self.sim.v[2] < 0: 
-                # Discourage high negative velocities
-                reward_z_vel = 1*np.tanh(self.sim.v[2])
-            else: # v==0 gives positive reward
-                # Encourage immediate z-thrust (negative reward) for small velocity
-                # Encourage high velocity but diminishing returns on higher velocities
-                reward_z_vel = 3*np.tanh(-0.3 + 0.2*self.sim.v[2])
-        # Above target (take it down)
-        else:
-            # positively reward -Z velocity but strongly discourage any +Z velocity
-            if self.sim.v[2] >= 0:
-                # Somewhat discourage positive velocities 
-                reward_z_vel = -(self.sim.v[2])**0.2
-            elif self.sim.v[2] > -0.5:
-                # Encourage slow but negative values
-                reward_z_vel = 1*np.tanh(0.5 + -self.sim.v[2]) # v{0,-0.5} => r{0.5,0.7}
-            else:
-                # Encourage negative velocities but diminishing returns
-                reward_z_vel = -np.log(abs(self.sim.v[2]))
-                
-        ## One velocity reward
-        reward_xyz_vel = reward_xy_vel + reward_z_vel
-        
-        
-        
-        ############# Time Rewards #############
-        reward_time = self.sim.time / 10.0 if self.sim.time > 2.0 else 0
-        # Give reward when past the 2.0 mark
-        if self.sim.time > 2.0 and self.sim.time < 2.1:
-            reward_time += 100
-        
-        
-        
-        ############# Position Rewards #############
-        # Reward correct position (z)
-        reward_z_pos = 6*np.tanh(1 - 0.1*abs(self.sim.pose[2] - self.target_pos[2]))  
-        
-        # Decrease position as an issue over time 
-        reward_z_pos /= self.sim.time
-        
-        # Strongly punish being too far above the target (overshot)
-        if (self.sim.pose[2] > 20) and (self.sim.time > 3.0):
-            reward_z_pos = -0.1*self.sim.pose[2]          
-        
-        # Position for x & y for should count less than the z position
-        reward_xy_pos = 0
-        
-        reward_xyz_pos = reward_xy_pos + reward_z_pos
 
+        # Punish being far from target in z
+        reward_pos = np.tanh( 1. - (self.sim.pose[2] - self.target_pos[2]) ** 2. )
+    
         
-        
-        ############# Final Rewards #############
-        # Scale final reward so total is usually less than 10 for each episode
-        # Give automatic points for each timestep it's running (avoid crash)
-        reward = (reward_xyz_vel + reward_xyz_pos + reward_time)/1000.
+        # Constant to keep going; don't crash
+        reward_const = 1.0
+    
+        reward = 0.05*reward_pos + 0.1*reward_const
 
         return reward
 
