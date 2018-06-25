@@ -22,7 +22,7 @@ class Task():
         self.state_size = self.action_repeat * 6
         self.action_low = 0
         self.action_high = 900
-        self.action_size = 1 # one for each rotor
+        self.action_size = 4 # one for each rotor
 
         # Goal
         self.target_pos = target_pos if target_pos is not None else np.array([0., 0., 10.]) 
@@ -35,12 +35,14 @@ class Task():
         reward_pos = -np.log( (self.sim.pose[2] + 0.1)/(self.target_pos[2]) )**2.
     
         # Penalize velocity in wrong direction
-        reward_wrong_vel = self.sim.v[2] * (self.target_pos[2] - self.sim.pose[2])
+        reward_wrong_vel = np.tanh( self.sim.v[2] * (self.target_pos[2] - self.sim.pose[2]) )
         
         # Constant to keep going; don't crash
-        reward_const = 1.0
+        reward_const = 4.0
+        
+        reward_xy = np.tanh(abs(self.target_pos[:2] - self.sim.pose[:2]).sum())
     
-        reward = (5*reward_pos + 5*reward_wrong_vel + 1*reward_const)/10.**5.
+        reward = (2*reward_xy + 5*reward_pos + 5*reward_wrong_vel + 1*reward_const)/10.**2.
 
         return reward
 
