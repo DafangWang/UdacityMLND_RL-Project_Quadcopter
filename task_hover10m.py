@@ -35,7 +35,7 @@ class Task():
         reward_pos = -np.log( (self.sim.pose[2] + 0.1)/(self.target_pos[2]) )**2.
     
         # Penalize velocity in wrong direction
-        reward_wrong_vel = np.tanh( self.sim.v[2] * (self.target_pos[2] - self.sim.pose[2]) )
+        reward_wrong_vel = np.tanh( -1. * self.sim.v[2] * (self.target_pos[2] - self.sim.pose[2]) )
         
         # Constant to keep going; don't crash
         reward_const = 4.0
