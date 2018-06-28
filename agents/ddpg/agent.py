@@ -51,9 +51,24 @@ class DDPG():
         self.last_state = state
         return state
 
-    def step(self, action, reward, next_state, done):
+    def step(self, state, action, reward, next_state, done):
+        # Need the action and states (current & next) for Q (for TD-Error
+        states = np.vstack([state])
+        actions = np.array([action]).astype(np.float32).reshape(-1, self.action_size)
+        next_states = np.vstack([next_state])        
+        
+        # Calculate Q for current state (before update)
+        Q_target = self.critic_target.model.predict_on_batch([states, actions])
+        # Calculate predicted Q from next state
+        actions_next = self.actor_target.model.predict_on_batch(next_states)
+        Q_target_next = self.critic_target.model.predict_on_batch([next_states, actions_next])
+        
+        # Get priority of experience from TD-Error
+        td_error = (reward + self.gamma * Q_target_next - Q_target)[0][0]
+        priority = abs(td_error) + 0.0001 #small factor so priority is not 0
+
          # Save experience / reward
-        self.memory.add(self.last_state, action, reward, next_state, done)
+        self.memory.add(self.last_state, action, reward, next_state, done, priority)
 
         # Learn, if enough samples are available in memory
         if len(self.memory) > self.batch_size:
@@ -68,7 +83,7 @@ class DDPG():
         state = np.reshape(state, [-1, self.state_size])
         action = self.actor_local.model.predict(state)[0]
         return list(action + self.noise.sample())  # add some noise for exploration
-
+    
     def learn(self, experiences):
         """Update policy and value parameters using given batch of experience tuples."""
         # Convert experience tuples to separate arrays for each element (states, actions, rewards, etc.)
@@ -86,7 +101,7 @@ class DDPG():
         # Compute Q targets for current states and train critic model (local)
         Q_targets = rewards + self.gamma * Q_targets_next * (1 - dones)
         self.critic_local.model.train_on_batch(x=[states, actions], y=Q_targets)
-
+        
         # Train actor model (local)
         action_gradients = np.reshape(self.critic_local.get_action_gradients([states, actions, 0]), (-1, self.action_size))
         self.actor_local.train_fn([states, action_gradients, 1])  # custom training function
