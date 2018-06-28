@@ -16,6 +16,7 @@ class ReplayBuffer:
         self.batch_size = batch_size
         self.experience = namedtuple("Experience", field_names=["state", "action", "reward", "next_state", "done", "priority"])
         self.total_priority = 0.0
+        self.a = 0.9
 
     def add(self, state, action, reward, next_state, done, priority):
         """Add a new experience to memory."""
@@ -23,7 +24,7 @@ class ReplayBuffer:
         if len(self.memory) == self.buffer_size:
             self.total_priority -= (self.memory[0]).priority
         # Add to total priority
-        self.total_priority += priority
+        self.total_priority += priority**self.a
         # Remember this experience
         e = self.experience(state, action, reward, next_state, done, priority)
         self.memory.append(e)
@@ -35,7 +36,7 @@ class ReplayBuffer:
             # Pick a random number from 0 to 1
             rand_num = random.random()
             # if number is less than Prob, use experience
-            prob =  e.priority / self.total_priority
+            prob =  e.priority**self.a / self.total_priority
             if rand_num < prob:
                 sample.append(e)
         # Always use previous experience if it is empty        
