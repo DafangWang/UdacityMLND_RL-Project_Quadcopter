@@ -4,16 +4,14 @@ from collections import namedtuple, deque
 class ReplayBuffer:
     """Fixed-size buffer to store experience tuples."""
 
-    def __init__(self, buffer_size, batch_size):
+    def __init__(self, buffer_size):
         """Initialize a ReplayBuffer object.
         Params
         ======
             buffer_size: maximum size of buffer
-            batch_size: size of each training batch
         """
         self.buffer_size = buffer_size
         self.memory = deque(maxlen=buffer_size)  # internal memory (deque)
-        self.batch_size = batch_size
         self.experience = namedtuple("Experience", field_names=["state", "action", "reward", "next_state", "done", "priority"])
         self.total_priority = 0.0
         self.a = 0.9
@@ -29,7 +27,7 @@ class ReplayBuffer:
         e = self.experience(state, action, reward, next_state, done, priority)
         self.memory.append(e)
 
-    def sample(self, batch_size=64):
+    def sample(self):
         """Randomly sample a batch of experiences from memory."""
         sample = []
         for e in self.memory:
