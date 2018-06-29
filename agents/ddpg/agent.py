@@ -33,13 +33,13 @@ class DDPG():
         self.noise = OUNoise(self.action_size, self.exploration_mu, self.exploration_theta, self.exploration_sigma)
 
         # Replay memory
-        self.buffer_size = 20000 # About 240 episodes (that last 5s each)
+        self.buffer_size = 15000 # About 180 episodes (that last 5s each)
         self.batch_size = 128
-        self.memory = ReplayBuffer(self.buffer_size)
+        self.memory = ReplayBuffer(self.buffer_size, self.batch_size)
 
         # Algorithm parameters
-        self.gamma = 0.95  # discount factor
-        self.tau = 0.2  # for soft update of target parameters
+        self.gamma = 0.99  # discount factor
+        self.tau = 0.02  # for soft update of target parameters
         
         # Logging info
         self.best_score = -np.inf
@@ -70,9 +70,9 @@ class DDPG():
          # Save experience / reward
         self.memory.add(self.last_state, action, reward, next_state, done, priority)
 
-        # Learn, if enough samples are available in experience memory
-        experiences = self.memory.sample()
-        if len(experiences) >= self.batch_size:
+        # Learn, if enough samples are available in memory
+        if len(self.memory) > self.batch_size:
+            experiences = self.memory.sample()
             self.learn(experiences)
 
         # Roll over last state and action
